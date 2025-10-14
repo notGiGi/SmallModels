@@ -1,172 +1,148 @@
+import pandas as pd
 from typing import Dict, List
-import re
 import logging
 
 logger = logging.getLogger(__name__)
 
 
-class MetricsCalculator:
-    """Calculate metrics for different task types."""
+class MetricsAnalyzer:
+    """
+    Analyze and extend lm-eval results.
+    Provides additional metrics beyond standard accuracy.
+    """
     
-    def calculate_metrics(
-        self, 
-        task: str, 
-        results: List[Dict]
-    ) -> Dict[str, float]:
+    def summarize_results(self, lmeval_results: Dict) -> pd.DataFrame:
         """
-        Calculate metrics for evaluation results.
+        Convert lm-eval results to clean DataFrame.
         
         Args:
-            task: Task name
-            results: List of evaluation results
+            lmeval_results: Results from lm-eval
             
         Returns:
-            Dict of metrics
+            DataFrame with task-level metrics
         """
-        if task == "boolq":
-            return self._metrics_boolq(results)
-        elif task == "triviaqa":
-            return self._metrics_triviaqa(results)
-        elif task == "hellaswag":
-            return self._metrics_hellaswag(results)
-        elif task == "gsm8k":
-            return self._metrics_gsm8k(results)
-        elif task == "humaneval":
-            return self._metrics_humaneval(results)
-        else:
-            logger.warning(f"No metrics defined for task: {task}")
-            return {}
+        rows = []
+        
+        for task, metrics in lmeval_results["results"].items():
+            row = {
+                "task": task,
+                "accuracy": metrics.get("acc,none", metrics.get("acc_norm,none", 0)),
+                "stderr": metrics.get("acc_stderr,none", 0),
+                "num_samples": metrics.get("alias", task) 
+            }
+            rows.append(row)
+        
+        df = pd.DataFrame(rows)
+        return df
     
-    def _metrics_boolq(self, results: List[Dict]) -> Dict[str, float]:
-        """Calculate metrics for BoolQ (binary classification)."""
-        correct = 0
-        total = len(results)
+    def compare_models(self, results_dict: Dict[str, Dict]) -> pd.DataFrame:
+        """
+        Compare multiple models across tasks.
         
-        for result in results:
-            pred = self._parse_bool(result["prediction"])
-            true = result["ground_truth"]
+        Args:
+            results_dict: Dict mapping model_name -> lm-eval results
             
-            if pred == true:
-                correct += 1
+        Returns:
+            Comparison DataFrame
+        """
+        all_data = {}
         
-        accuracy = correct / total if total > 0 else 0.0
+        for model_name, results in results_dict.items():
+            df = self.summarize_results(results)
+            all_data[model_name] = df.set_index("task")["accuracy"]
         
-        return {
-            "accuracy": accuracy,
-            "correct": correct,
-            "total": total
+        comparison_df = pd.DataFrame(all_data)
+        comparison_df = comparison_df.round(4)
+        
+        return comparison_df
+    
+    def calculate_relative_performance(
+        self, 
+        results_dict: Dict[str, Dict],
+        baseline_model: str
+    ) -> pd.DataFrame:
+        """
+        Calculate performance relative to baseline.
+        
+        Args:
+            results_dict: Dict of model results
+            baseline_model: Name of baseline model
+            
+        Returns:
+            DataFrame with relative performance
+        """
+        comparison = self.compare_models(results_dict)
+        
+        if baseline_model not in comparison.columns:
+            raise ValueError(f"Baseline model {baseline_model} not found")
+        
+        baseline = comparison[baseline_model]
+        relative = comparison.div(baseline, axis=0) - 1  
+        
+        return relative.round(4)
+    
+    def identify_failure_patterns(
+        self,
+        model_results: Dict,
+        threshold: float = 0.5
+    ) -> Dict[str, List[str]]:
+        """
+        Identify tasks where model performs poorly.
+        
+        Args:
+            model_results: Results from lm-eval
+            threshold: Accuracy threshold for "failure"
+            
+        Returns:
+            Dict categorizing tasks by performance
+        """
+        df = self.summarize_results(model_results)
+        
+        patterns = {
+            "strong": df[df["accuracy"] >= 0.7]["task"].tolist(),
+            "moderate": df[(df["accuracy"] >= threshold) & (df["accuracy"] < 0.7)]["task"].tolist(),
+            "weak": df[df["accuracy"] < threshold]["task"].tolist()
         }
-    
-    def _metrics_triviaqa(self, results: List[Dict]) -> Dict[str, float]:
-        """Calculate metrics for TriviaQA (exact match + F1)."""
-        exact_matches = 0
-        total = len(results)
         
-        for result in results:
-            pred = result["prediction"].lower().strip()
-            true_answers = result["ground_truth"]["value"]
+        return patterns
+    
+    def create_heatmap_data(
+        self,
+        results_dict: Dict[str, Dict]
+    ) -> pd.DataFrame:
+        """
+        Create data for capability heatmap visualization.
+        
+        Args:
+            results_dict: Dict of model results
             
-            
-            if isinstance(true_answers, str):
-                true_answers = [true_answers]
-            
-            for answer in true_answers:
-                if self._normalize_answer(pred) == self._normalize_answer(answer):
-                    exact_matches += 1
-                    break
+        Returns:
+            DataFrame suitable for heatmap plotting
+        """
+        comparison = self.compare_models(results_dict)
         
-        accuracy = exact_matches / total if total > 0 else 0.0
+        heatmap_data = comparison.T
         
-        return {
-            "exact_match": accuracy,
-            "correct": exact_matches,
-            "total": total
-        }
+        return heatmap_data
     
-    def _metrics_hellaswag(self, results: List[Dict]) -> Dict[str, float]:
-        """Calculate metrics for HellaSwag (multiple choice)."""
-        correct = 0
-        total = len(results)
+    def print_summary(self, results_dict: Dict[str, Dict]):
+        """
+        Print formatted summary of results.
         
-        for result in results:
-            pred = self._parse_choice(result["prediction"])
-            true = result["ground_truth"]
-            
-            if pred == true:
-                correct += 1
+        Args:
+            results_dict: Dict of model results
+        """
+        comparison = self.compare_models(results_dict)
         
-        accuracy = correct / total if total > 0 else 0.0
+        print("\n" + "="*70)
+        print("MODEL COMPARISON SUMMARY")
+        print("="*70)
+        print(comparison.to_string())
+        print("="*70)
         
-        return {
-            "accuracy": accuracy,
-            "correct": correct,
-            "total": total
-        }
     
-    def _metrics_gsm8k(self, results: List[Dict]) -> Dict[str, float]:
-        """Calculate metrics for GSM8K (math problems)."""
-        correct = 0
-        total = len(results)
-        
-        for result in results:
-            pred_num = self._extract_number(result["prediction"])
-            true_num = self._extract_number(result["ground_truth"])
-            
-            if pred_num is not None and true_num is not None:
-                if abs(pred_num - true_num) < 1e-4:  # Float comparison
-                    correct += 1
-        
-        accuracy = correct / total if total > 0 else 0.0
-        
-        return {
-            "accuracy": accuracy,
-            "correct": correct,
-            "total": total
-        }
-    
-    def _metrics_humaneval(self, results: List[Dict]) -> Dict[str, float]:
-        """Calculate metrics for HumanEval (code generation)."""
-
-        logger.warning("HumanEval metrics require code execution (not implemented)")
-        return {
-            "pass@1": 0.0,
-            "total": len(results)
-        }
-    
-
-    
-    def _parse_bool(self, text: str) -> bool:
-        """Parse Yes/No from text."""
-        text = text.lower().strip()
-        if any(word in text[:10] for word in ["yes", "true", "correct"]):
-            return True
-        if any(word in text[:10] for word in ["no", "false", "incorrect"]):
-            return False
-        return False  
-    
-    def _parse_choice(self, text: str) -> int:
-        """Parse choice number (1-4) from text."""
-        match = re.search(r'\b([1-4])\b', text)
-        if match:
-            return int(match.group(1))
-        return 0  # Invalid
-    
-    def _extract_number(self, text: str) -> float:
-        """Extract number from text."""
-
-        match = re.search(r'-?\d+\.?\d*', str(text))
-        if match:
-            try:
-                return float(match.group())
-            except:
-                return None
-        return None
-    
-    def _normalize_answer(self, text: str) -> str:
-        """Normalize answer for comparison."""
-
-        text = text.lower().strip()
-        text = re.sub(r'\b(a|an|the)\b', ' ', text)
-        text = re.sub(r'[^\w\s]', '', text)
-        text = re.sub(r'\s+', ' ', text)
-        return text.strip()
+        print("\nBEST MODEL PER TASK:")
+        for task in comparison.index:
+            best_model = comparison.loc[task].idxmax()
+            best_score = comparison.loc[task].max()
+            print(f"  {task:20s}: {best_model:15s} ({best_score:.2%})")
