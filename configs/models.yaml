@@ -1,0 +1,25 @@
+models:
+  phi3:
+    name: "microsoft/Phi-3-mini-4k-instruct"
+    params: 3.8B
+    context_length: 4096
+    
+  gemma2b:
+    name: "google/gemma-2b-it"
+    params: 2.5B
+    context_length: 8192
+    
+  qwen:
+    name: "Qwen/Qwen2-1.5B-Instruct"
+    params: 1.5B
+    context_length: 4096
+    
+  tinyllama:
+    name: "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
+    params: 1.1B
+    context_length: 2048
+    
+  smollm:
+    name: "HuggingFaceTB/SmolLM-360M-Instruct"
+    params: 360M
+    context_length: 2048

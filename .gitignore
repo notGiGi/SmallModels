@@ -1,0 +1,80 @@
+﻿# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+
+cache/
+*.bin
+*.safetensors
+*.gguf
+*.pt
+*.pth
+models/
+checkpoints/
+
+# HuggingFace cache
+.cache/
+huggingface/
+
+# Data 
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/samples/.gitkeep
+
+# Results 
+results/raw/*
+results/processed/*
+results/analysis/*
+!results/.gitkeep
+
+# Figures 
+figures/*.png
+figures/*.jpg
+figures/*.pdf
+!figures/.gitkeep
+
+# Logs
+*.log
+logs/
+wandb/
+
+# OS
+.DS_Store
+Thumbs.db
+*.tmp
+
+# Temporary files
+estructura_actual.txt
+activate.bat
+activate.ps1
+
+# Secrets
+.env
+secrets.yaml
+*.key

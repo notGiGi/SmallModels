@@ -1,0 +1,25 @@
+tasks:
+  boolq:
+    description: "Yes/No questions"
+    n_samples: 100
+    max_tokens: 10
+    
+  triviaqa:
+    description: "Factual knowledge"
+    n_samples: 100
+    max_tokens: 20
+    
+  hellaswag:
+    description: "Common sense reasoning"
+    n_samples: 100
+    max_tokens: 10
+    
+  gsm8k:
+    description: "Grade school math"
+    n_samples: 100
+    max_tokens: 100
+    
+  humaneval:
+    description: "Code generation"
+    n_samples: 50
+    max_tokens: 200
