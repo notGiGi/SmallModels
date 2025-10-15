@@ -68,7 +68,7 @@ class LMEvalWrapper:
         logger.info(f"Few-shot: {num_fewshot}, Limit: {limit}")
         
         try:
-            # Run evaluation
+           
             results = evaluator.simple_evaluate(
                 model="hf",
                 model_args=f"pretrained={self.model_name},dtype=auto",
@@ -340,8 +340,7 @@ def get_all_tasks():
         "arc_challenge",
         "winogrande",
         "piqa",
-        "gsm8k",      
-        "humaneval"     
+        "gsm8k"   
     ]
 
 
@@ -355,6 +354,5 @@ def get_task_groups():
     return {
         "reasoning": ["boolq", "hellaswag", "arc_easy", "arc_challenge", "winogrande", "piqa"],
         "math": ["gsm8k"],
-        "code": ["humaneval"],
         "all": get_all_tasks() 
     }
