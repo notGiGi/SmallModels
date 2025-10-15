@@ -324,3 +324,37 @@ class ModelEvaluator:
                 all_results[model_key] = {"error": str(e)}
         
         return all_results
+
+
+def get_all_tasks():
+    """
+    Get all available tasks for evaluation.
+    
+    Returns:
+        list: List of all task names
+    """
+    return [
+        "boolq",
+        "hellaswag", 
+        "arc_easy",
+        "arc_challenge",
+        "winogrande",
+        "piqa",
+        "gsm8k",      
+        "humaneval"     
+    ]
+
+
+def get_task_groups():
+    """
+    Get tasks organized by type.
+    
+    Returns:
+        dict: Dictionary of task groups
+    """
+    return {
+        "reasoning": ["boolq", "hellaswag", "arc_easy", "arc_challenge", "winogrande", "piqa"],
+        "math": ["gsm8k"],
+        "code": ["humaneval"],
+        "all": get_all_tasks() 
+    }
