@@ -133,7 +133,6 @@ class LMEvalWrapper:
             }
         
         return formatted
-    
     def save_results(self, results: Dict, output_path: str):
         """
         Save results to JSON file.
@@ -149,24 +148,45 @@ class LMEvalWrapper:
         def make_serializable(obj):
             """Convert numpy/torch types to Python types."""
             import numpy as np
+            
+            # Handle numpy types
             if isinstance(obj, (np.integer, np.floating)):
                 return float(obj)
             elif isinstance(obj, np.ndarray):
                 return obj.tolist()
-            elif hasattr(obj, 'item'):  # torch tensors
-                return obj.item()
+            elif isinstance(obj, np.bool_):
+                return bool(obj)
+            
+            # Handle dtype objects (the problematic one)
+            elif hasattr(obj, 'dtype') and isinstance(obj.dtype, np.dtype):
+                return str(obj)
+            
+            # Handle torch tensors
+            elif hasattr(obj, 'item'):
+                try:
+                    return obj.item()
+                except:
+                    return str(obj)
+            
+            # Recursively handle containers
             elif isinstance(obj, dict):
                 return {k: make_serializable(v) for k, v in obj.items()}
-            elif isinstance(obj, list):
+            elif isinstance(obj, (list, tuple)):
                 return [make_serializable(v) for v in obj]
-            else:
+            
+            # Handle other types
+            elif isinstance(obj, (str, int, float, bool, type(None))):
                 return obj
+            else:
+                # Last resort: convert to string
+                return str(obj)
         
         # Clean results
         clean_results = make_serializable(results)
         
-        with open(output_path, 'w') as f:
-            json.dump(clean_results, f, indent=2)
+        # Save to file
+        with open(output_path, 'w', encoding='utf-8') as f:
+            json.dump(clean_results, f, indent=2, ensure_ascii=False)
         
         logger.info(f"Results saved to {output_path}")
     
