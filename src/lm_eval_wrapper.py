@@ -241,7 +241,7 @@ class ModelEvaluator:
         Evaluate model on specified tasks.
         
         Args:
-            model_key: Model identifier
+            model_key: Model identifier (smollm, tinyllama, qwen, etc.)
             tasks: List of task names
             limit: Limit number of samples (None = all)
             log_samples: Whether to save individual samples (for taxonomy)
@@ -251,19 +251,33 @@ class ModelEvaluator:
         """
         import lm_eval
         
-        print(f"🔬 Evaluating {model_key} on {len(tasks)} tasks...")
+        # Get model path from model_key
+        model_configs = {
+            'smollm': 'HuggingFaceTB/SmolLM-360M-Instruct',
+            'tinyllama': 'TinyLlama/TinyLlama-1.1B-Chat-v1.0',
+            'qwen': 'Qwen/Qwen-1_5B',
+            'gemma2b': 'google/gemma-2b',
+            'phi3': 'microsoft/Phi-3-mini-4k-instruct'
+        }
+        
+        if model_key not in model_configs:
+            raise ValueError(f"Unknown model_key: {model_key}. Available: {list(model_configs.keys())}")
+        
+        model_path = model_configs[model_key]
+        
+        print(f"🔬 Evaluating {model_key} ({model_path}) on {len(tasks)} tasks...")
         if log_samples:
             print("📝 Sample logging ENABLED (for taxonomy analysis)")
         
         results = lm_eval.simple_evaluate(
-            model=self.model_name,
-            model_args=self.model_args,
+            model='hf',
+            model_args=f'pretrained={model_path},dtype=auto',
             tasks=tasks,
             num_fewshot=0,
             batch_size=self.batch_size,
             device=self.device,
             limit=limit,
-            log_samples=log_samples,  # Save samples for taxonomy
+            log_samples=log_samples,
         )
         
         # Verify samples were saved
