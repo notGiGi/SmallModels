@@ -239,15 +239,6 @@ class ModelEvaluator:
                    limit: Optional[int] = None, log_samples: bool = True):
         """
         Evaluate model on specified tasks.
-        
-        Args:
-            model_key: Model identifier (smollm, tinyllama, qwen, etc.)
-            tasks: List of task names
-            limit: Limit number of samples (None = all)
-            log_samples: Whether to save individual samples (for taxonomy)
-        
-        Returns:
-            dict: Evaluation results with samples
         """
         import lm_eval
         
@@ -255,13 +246,13 @@ class ModelEvaluator:
         model_configs = {
             'smollm': 'HuggingFaceTB/SmolLM-360M-Instruct',
             'tinyllama': 'TinyLlama/TinyLlama-1.1B-Chat-v1.0',
-            'qwen': 'Qwen/Qwen-1_5B',
+            'qwen': 'Qwen/Qwen2-1.5B-Instruct',  # ← CORREGIDO
             'gemma2b': 'google/gemma-2b',
             'phi3': 'microsoft/Phi-3-mini-4k-instruct'
         }
         
         if model_key not in model_configs:
-            raise ValueError(f"Unknown model_key: {model_key}. Available: {list(model_configs.keys())}")
+            raise ValueError(f"Unknown model_key: {model_key}")
         
         model_path = model_configs[model_key]
         
