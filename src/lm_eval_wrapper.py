@@ -235,49 +235,44 @@ class ModelEvaluator:
         self.device = device
         self.batch_size = batch_size
     
-    def evaluate_model(
-        self,
-        model_key: str,
-        tasks: List[str],
-        num_fewshot: int = 0,
-        limit: Optional[int] = None
-    ) -> Dict:
+    def evaluate_model(self, model_key: str, tasks: List[str], 
+                   limit: Optional[int] = None, log_samples: bool = True):
         """
-        Evaluate a single model.
+        Evaluate model on specified tasks.
         
         Args:
-            model_key: Model key (e.g., "phi3")
-            tasks: List of tasks
-            num_fewshot: Few-shot examples
-            limit: Limit examples per task
-            
+            model_key: Model identifier
+            tasks: List of task names
+            limit: Limit number of samples (None = all)
+            log_samples: Whether to save individual samples (for taxonomy)
+        
         Returns:
-            Results dictionary
+            dict: Evaluation results with samples
         """
-        if model_key not in self.MODELS:
-            raise ValueError(f"Unknown model: {model_key}. Choose from: {list(self.MODELS.keys())}")
+        import lm_eval
         
-        model_name = self.MODELS[model_key]
+        print(f"🔬 Evaluating {model_key} on {len(tasks)} tasks...")
+        if log_samples:
+            print("📝 Sample logging ENABLED (for taxonomy analysis)")
         
-        logger.info(f"\n{'='*60}")
-        logger.info(f"Evaluating: {model_key} ({model_name})")
-        logger.info(f"{'='*60}")
-        
-        evaluator = LMEvalWrapper(
-            model_name=model_name,
-            device=self.device,
-            batch_size=self.batch_size
-        )
-        
-        results = evaluator.evaluate(
+        results = lm_eval.simple_evaluate(
+            model=self.model_name,
+            model_args=self.model_args,
             tasks=tasks,
-            num_fewshot=num_fewshot,
-            limit=limit
+            num_fewshot=0,
+            batch_size=self.batch_size,
+            device=self.device,
+            limit=limit,
+            log_samples=log_samples,  # Save samples for taxonomy
         )
         
-      
-        results["model_key"] = model_key
-        results["model_name"] = model_name
+        # Verify samples were saved
+        if log_samples:
+            if 'samples' in results and results['samples']:
+                n_samples = sum(len(results['samples'].get(task, [])) for task in tasks)
+                print(f"✅ Captured {n_samples} samples for taxonomy")
+            else:
+                print(f"⚠️  WARNING: log_samples=True but no samples in results!")
         
         return results
     
